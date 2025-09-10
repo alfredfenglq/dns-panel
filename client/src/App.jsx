@@ -13,6 +13,7 @@ export default function App() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null); // null = create
+  const [filterType, setFilterType] = useState('all');
 
   // 获取 Zones
   useEffect(() => {
@@ -39,6 +40,19 @@ export default function App() {
     [zones, selectedZoneId]
   );
 
+  const recordTypes = useMemo(
+    () => Array.from(new Set(dnsRecords.map((r) => r.type))),
+    [dnsRecords]
+  );
+
+  const filteredRecords = useMemo(
+    () =>
+      filterType === 'all'
+        ? dnsRecords
+        : dnsRecords.filter((r) => r.type === filterType),
+    [dnsRecords, filterType]
+  );
+
   // 获取选中 Zone 的 DNS 记录
   async function loadDnsRecords(zoneId) {
     if (!zoneId) return;
@@ -47,6 +61,7 @@ export default function App() {
       setIsLoadingRecords(true);
       const { data } = await api.get(`/api/zones/${zoneId}/dns_records`);
       setDnsRecords(data?.result || []);
+      setFilterType('all');
     } catch (err) {
       setError(getErrMsg(err));
     } finally {
@@ -176,16 +191,35 @@ export default function App() {
 
       {/* 记录表格 */}
       <section className="bg-white shadow-sm border rounded">
-        <div className="p-3 border-b">
-          <h2 className="font-semibold">
-            DNS 记录（{selectedZone?.name || '-'}）
-          </h2>
-          {isLoadingRecords && (
-            <p className="text-sm text-gray-500">正在加载解析记录…</p>
+        <div className="p-3 border-b md:flex md:items-center md:justify-between">
+          <div>
+            <h2 className="font-semibold">
+              DNS 记录（{selectedZone?.name || '-'}）
+            </h2>
+            {isLoadingRecords && (
+              <p className="text-sm text-gray-500">正在加载解析记录…</p>
+            )}
+          </div>
+          {!!recordTypes.length && (
+            <div className="mt-2 md:mt-0">
+              <label className="mr-2 text-sm">筛选类型：</label>
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+              >
+                <option value="all">全部</option>
+                {recordTypes.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        <div>
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
@@ -198,11 +232,11 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {dnsRecords.map((r) => (
+              {filteredRecords.map((r) => (
                 <tr key={r.id} className="border-b hover:bg-gray-50">
                   <td className="p-3 whitespace-nowrap">{r.type}</td>
-                  <td className="p-3">{r.name}</td>
-                  <td className="p-3">{r.content}</td>
+                  <td className="p-3 break-all">{r.name}</td>
+                  <td className="p-3 break-all">{r.content}</td>
                   <td className="p-3">{String(r.proxied)}</td>
                   <td className="p-3">{r.ttl}</td>
                   <td className="p-3">
@@ -224,7 +258,7 @@ export default function App() {
                 </tr>
               ))}
 
-              {!dnsRecords.length && !isLoadingRecords && (
+              {!filteredRecords.length && !isLoadingRecords && (
                 <tr>
                   <td colSpan={6} className="p-6 text-center text-gray-500">
                     暂无记录
