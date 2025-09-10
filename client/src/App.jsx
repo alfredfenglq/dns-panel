@@ -168,7 +168,7 @@ export default function App() {
       </section>
 
       {/* 错误提示 */}
-      {!!error and (
+      {!!error && (
         <div className="mb-4 p-3 border border-red-300 bg-red-50 text-red-700 rounded">
           {error}
         </div>
@@ -224,7 +224,7 @@ export default function App() {
                 </tr>
               ))}
 
-              {!dnsRecords.length && !isLoadingRecords and (
+              {!dnsRecords.length && !isLoadingRecords && (
                 <tr>
                   <td colSpan={6} className="p-6 text-center text-gray-500">
                     暂无记录
