@@ -14,6 +14,7 @@ export default function App() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null); // null = create
   const [filterType, setFilterType] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // 获取 Zones
   useEffect(() => {
@@ -45,13 +46,19 @@ export default function App() {
     [dnsRecords]
   );
 
-  const filteredRecords = useMemo(
-    () =>
+  const filteredRecords = useMemo(() => {
+    const byType =
       filterType === 'all'
         ? dnsRecords
-        : dnsRecords.filter((r) => r.type === filterType),
-    [dnsRecords, filterType]
-  );
+        : dnsRecords.filter((r) => r.type === filterType);
+
+    const keyword = searchTerm.trim().toLowerCase();
+    if (!keyword) return byType;
+
+    return byType.filter((r) =>
+      (r?.name || '').toLowerCase().includes(keyword)
+    );
+  }, [dnsRecords, filterType, searchTerm]);
 
   // 获取选中 Zone 的 DNS 记录
   async function loadDnsRecords(zoneId) {
@@ -61,7 +68,6 @@ export default function App() {
       setIsLoadingRecords(true);
       const { data } = await api.get(`/api/zones/${zoneId}/dns_records`);
       setDnsRecords(data?.result || []);
-      setFilterType('all');
     } catch (err) {
       setError(getErrMsg(err));
     } finally {
@@ -74,6 +80,19 @@ export default function App() {
       loadDnsRecords(selectedZoneId);
     }
   }, [selectedZoneId]);
+
+  useEffect(() => {
+    setSearchTerm('');
+  }, [selectedZoneId]);
+
+  useEffect(() => {
+    if (filterType === 'all') return;
+
+    const hasFilterType = dnsRecords.some((r) => r.type === filterType);
+    if (!hasFilterType) {
+      setFilterType('all');
+    }
+  }, [dnsRecords, filterType]);
 
   // 删除
   async function handleDelete(record) {
@@ -191,7 +210,7 @@ export default function App() {
 
       {/* 记录表格 */}
       <section className="bg-white shadow-sm border rounded">
-        <div className="p-3 border-b md:flex md:items-center md:justify-between">
+        <div className="p-3 border-b md:flex md:items-center md:justify-between md:gap-4">
           <div>
             <h2 className="font-semibold">
               DNS 记录（{selectedZone?.name || '-'}）
@@ -200,23 +219,44 @@ export default function App() {
               <p className="text-sm text-gray-500">正在加载解析记录…</p>
             )}
           </div>
-          {!!recordTypes.length && (
-            <div className="mt-2 md:mt-0">
-              <label className="mr-2 text-sm">筛选类型：</label>
-              <select
-                className="border rounded px-2 py-1 text-sm"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
+          <div className="mt-3 md:mt-0 flex flex-col gap-3 md:flex-row md:items-center">
+            {!!recordTypes.length && (
+              <div className="flex items-center gap-2">
+                <label className="text-sm" htmlFor="record-type-filter">
+                  筛选类型：
+                </label>
+                <select
+                  id="record-type-filter"
+                  className="border rounded px-2 py-1 text-sm"
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                >
+                  <option value="all">全部</option>
+                  {recordTypes.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <label
+                className="text-sm whitespace-nowrap"
+                htmlFor="domain-search"
               >
-                <option value="all">全部</option>
-                {recordTypes.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                搜索域名：
+              </label>
+              <input
+                id="domain-search"
+                type="search"
+                className="border rounded px-2 py-1 text-sm"
+                placeholder="输入域名关键字"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          )}
+          </div>
         </div>
 
         <div>
