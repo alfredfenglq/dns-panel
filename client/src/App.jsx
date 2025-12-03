@@ -56,7 +56,8 @@ export default function App() {
     if (!keyword) return byType;
 
     return byType.filter((r) =>
-      (r?.name || '').toLowerCase().includes(keyword)
+      (r?.name || '').toLowerCase().includes(keyword) ||
+      (r?.content || '').toLowerCase().includes(keyword)
     );
   }, [dnsRecords, filterType, searchTerm]);
 
